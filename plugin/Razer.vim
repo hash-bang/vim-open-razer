@@ -19,23 +19,23 @@ let s:mode_map = {
 	\ 'V': s:colors['purple'],
 \}
 
-function RazerWholeColor(hex)
+function! Razer#Static(hex)
 	let l:writeStr = 0z + a:hex
 	call writefile(writeStr, g:razer_device_path . "/matrix_effect_static")
 endfunction
 
-function RazerModeChange(mode)
+function! Razer#Mode(mode)
 	if has_key(s:mode_map, a:mode)
-		call RazerWholeColor(s:mode_map[a:mode])
+		call Razer#Static(s:mode_map[a:mode])
 	endif
 endfunction
 
-function RazerSetup()
-	autocmd ModeChanged * call RazerModeChange(mode())
+function! Razer#Setup()
+	autocmd ModeChanged * call Razer#Mode(mode())
 endfunction
 
 if g:razer_enabled && len(readdir(g:razer_device_path)) > 0
-	call RazerSetup()
+	call Razer#Setup()
 elseif g:razer_silent
 	" Do nothing
 else
