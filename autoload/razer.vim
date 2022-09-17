@@ -1,3 +1,5 @@
+let g:razer_enabled = 1
+let g:razer_silent = 0
 let g:razer_device_path = "/sys/bus/hid/drivers/razerkbd/0003:1532:025E.0003"
 
 let s:colors = {
@@ -28,5 +30,14 @@ function RazerModeChange(mode)
 	endif
 endfunction
 
+function RazerSetup()
+	autocmd ModeChanged * call RazerModeChange(mode())
+endfunction
 
-autocmd ModeChanged * call RazerModeChange(mode())
+if g:razer_enabled && len(readdir(g:razer_device_path)) > 0
+	call RazerSetup()
+elseif g:razer_silent
+	" Do nothing
+else
+	warn "No OpenRazer device found, use `let g:razer_device_path = /sys/bus/hid/drivers/razerkbd/<DEVICE>` to the right device or `let g:razer_silent = 1` to STFU"
+endif
