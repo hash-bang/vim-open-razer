@@ -25,14 +25,14 @@ if !exists('g:razer_colors')
 endif
 
 if !exists('g:razer_modes')
-	let g:razer_modes = {
-		\ 'Mode:n': g:razer_colors['blue'],
-		\ 'Mode:i': g:razer_colors['white'],
-		\ 'Mode:v': g:razer_colors['purple'],
-		\ 'Mode:V': g:razer_colors['purple'],
-		\ 'Mode:Term': g:razer_colors['yellow'],
-		\ 'State:Resume': g:razer_colors['blue'],
-		\ 'State:Suspend': g:razer_colors['blue'],
+	let g:razer_modes = #{
+		\ Mode:n: 'blue',
+		\ Mode:i: 'white',
+		\ Mode:v: 'purple',
+		\ Mode:V: 'purple',
+		\ Mode:Term: 'yellow',
+		\ State:Resume: 'blue',
+		\ State:Suspend: 'blue',
 	\}
 endif
 " }}}
@@ -43,6 +43,7 @@ endif
 "
 " This function accepts the following input types:
 "     * "#AABBCC" - Color hex
+"     * Any key - If string exists within g:razer_colors use its value
 "
 function! Razer#Color2OR(input)
 	if a:input =~ '^#[0-9a-f]\{6\}$'
@@ -52,6 +53,8 @@ function! Razer#Color2OR(input)
 		let blob[2] = str2nr(strpart(a:input, 5, 2), 16)
 		" echo "COLOR CONV [" . a:input . "]" . " => [" . string(l:blob[0]) . "," . string(l:blob[1]) . "," . string(l:blob[2]) . "]"
 		return blob
+	elseif has_key(g:razer_colors, a:input)
+		return Razer#Color2OR(g:razer_colors[a:input])
 	else
 		throw "Unsupported input color '" . a:input . "' - must be hex ('#123456')"
 	endif
