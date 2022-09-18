@@ -1,3 +1,11 @@
+" ============================================================================
+" File:        Razer.vim
+" Description: OpenRazer support for VIM
+" Maintainer:  Matt Carter <m@ttcarter.com>
+" License:     MIT, see LICENSE for more details.
+" Website:     https://github.com/hash-bang/vim-open-razer
+" ============================================================================
+
 " Options loading {{{
 " Set this to 1 to override all "if it doesn't already exist set it" options
 " This is useful for rapidly reloading this module (via `source %`) to update
@@ -374,7 +382,6 @@ function! Razer#Theme(theme=g:razer_theme, force=0)
 	echo "Load theme " . a:theme
 	try
 		let theme_path = s:razer_path . '/themes/' . fnameescape(a:theme) . '.vim'
-		echo "INCLUDE [" . theme_path . "]"
 		execute('source ' . theme_path)
 		if ! exists('g:razer_modes')
 			echoerr "Expeccted `g:razer_modes` to now be defined after including [" . theme_path . "] but its still not - missing or corrupt theme?"

@@ -1,4 +1,11 @@
-" Based on the Razer Cynosa V2 (1532:025e)
+" ============================================================================
+" File:        cynosa-v2.vim
+" Description: Razer Cynosa V2 bindings for VIM-Open-Razer
+" Maintainer:  Matt Carter <m@ttcarter.com>
+" License:     MIT, see LICENSE for more details.
+" Website:     https://github.com/hash-bang/vim-open-razer
+" ============================================================================
+
 " FIXME: Missing:
 " 	Row 0 - Mute, Volume buttons
 " 	Row 1 - num-
