@@ -379,7 +379,6 @@ function! Razer#Theme(theme=g:razer_theme, force=0)
 		return
 	endif
 
-	echo "Load theme " . a:theme
 	try
 		let theme_path = s:razer_path . '/themes/' . fnameescape(a:theme) . '.vim'
 		execute('source ' . theme_path)
