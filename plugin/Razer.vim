@@ -11,6 +11,14 @@ if !exists('g:razer_device_path')
 	let g:razer_device_path = "/sys/bus/hid/drivers/razerkbd/0003:1532:025E.0003"
 endif
 
+if !exists('g:razer_device_max_rows')
+	let g:razer_device_max_rows = 5
+endif
+
+if !exists('g:razer_device_max_cols')
+	let g:razer_device_max_cols = 21
+endif
+
 
 if !exists('g:razer_colors')
 	let g:razer_colors = {
@@ -63,10 +71,37 @@ endfunction
 
 
 " Simple function to set all keys on the keyboard to the same static color
-" @param {blob} color Hex color to set everything to
+" NOTE: This function has a fade effect from the previous color to the one
+"       specified. If an instant set is requried use Razer#Flood()
+" @param {string} color Any valid color to set all keys to
 function! Razer#Static(color)
-	let writeStr = 0z + a:color
-	call writefile(writeStr, g:razer_device_path . "/matrix_effect_static")
+	let writeColor = Razer#Color2OR(a:color)
+	call writefile(writeColor, g:razer_device_path . "/matrix_effect_static")
+endfunction
+
+
+" Set all keys on the keyboard to the same color
+" This function differs from Razer#Static() in that it uses the keyboard
+" framebuffer, avoiding the fade effect the hardware forces on a usual color change
+" @param {string} color Any valid color to set all keys to
+function! Razer#Flood(color)
+	let writeColor = Razer#Color2OR(a:color)
+	let row = 0
+	while row < g:razer_device_max_rows + 1
+		let writeLine = 0z00
+		let writeLine[0] = row
+		let writeLine[1] = 0
+		let writeLine[2] = g:razer_device_max_cols
+		let col = 0
+		while col < g:razer_device_max_cols + 1
+			let writeLine += writeColor
+			let col += 1
+		endwhile
+		call writefile(writeLine, g:razer_device_path . "/matrix_custom_frame", "a")
+		let row += 1
+	endwhile
+
+	call writefile(['1'], g:razer_device_path . "/matrix_effect_custom")
 endfunction
 
 
@@ -75,7 +110,9 @@ endfunction
 " @param {dict} action The action object to execute
 function! Razer#Action(action)
 	if (has_key(a:action, 'static'))
-		call Razer#Static(Razer#Color2OR(a:action['static']))
+		call Razer#Static(a:action['static'])
+	elseif (has_key(a:action, 'flood'))
+		call Razer#Flood(a:action['flood'])
 	else
 		throw "Unknown action '" . a:action . "'"
 	endif
