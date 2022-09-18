@@ -346,16 +346,28 @@ endfunction
 
 " Execute a single action
 " This funciton is usally called by Razer#Mode(action) to execute a mode change
-" @param {dict} action The action object to execute
+"
+" Actions can be:
+"     * {"static": color} - use Razer#Static() to set all keys to the same color (w/fade animation)
+"     * {"flood": color} - use Razer#Flood() to set all keys to the same color (instantly)
+"     * {"keymap": dict} - Set a keymap via Razer#Keymap()
+"     * ">pointer" inherit behaviour from a another mode
+"
+" @param {dict|string} action The action object to execute
 function! Razer#Action(action)
-	if (has_key(a:action, 'static'))
+	if type(a:action) == type({}) && has_key(a:action, 'static')
 		call Razer#Static(a:action['static'])
-	elseif (has_key(a:action, 'flood'))
+	elseif type(a:action) == type({}) && has_key(a:action, 'flood')
 		call Razer#Flood(a:action['flood'])
-	elseif (has_key(a:action, 'keymap'))
+	elseif type(a:action) == type({}) && has_key(a:action, 'keymap')
 		call Razer#Keymap(a:action['keymap'])
+	elseif type(a:action) == type({}) && has_key(a:action, 'inherit')
+		call Razer#Action(g:razer_modes[a:action['inherit']])
+	elseif type(a:action) == type('') && a:action =~ '^>'
+		let pointer = a:action[1:]
+		return Razer#Action(g:razer_modes[pointer])
 	else
-		throw "Unknown action '" . a:action . "'"
+		throw "Unknown action '" . string(a:action) . "'"
 	endif
 endfunction
 
