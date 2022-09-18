@@ -18,16 +18,20 @@ if !exists('g:razer_colors')
 		\ 'red': 0zFF0000,
 		\ 'green': 0z00FF00,
 		\ 'blue': 0z0000FF,
+		\ 'yellow': 0zFFFF00,
 		\ 'purple': 0zFF00FF,
 	\}
 endif
 
 if !exists('g:razer_modes')
 	let g:razer_modes = {
-		\ 'n': g:razer_colors['blue'],
-		\ 'i': g:razer_colors['white'],
-		\ 'v': g:razer_colors['purple'],
-		\ 'V': g:razer_colors['purple'],
+		\ 'Mode:n': g:razer_colors['blue'],
+		\ 'Mode:i': g:razer_colors['white'],
+		\ 'Mode:v': g:razer_colors['purple'],
+		\ 'Mode:V': g:razer_colors['purple'],
+		\ 'Mode:Term': g:razer_colors['yellow'],
+		\ 'State:Resume': g:razer_colors['blue'],
+		\ 'State:Suspend': g:razer_colors['blue'],
 	\}
 endif
 " }}}
@@ -38,13 +42,17 @@ function! Razer#Static(hex)
 endfunction
 
 function! Razer#Mode(mode)
+	echo "Go mode [" . a:mode . "]"
 	if has_key(g:razer_modes, a:mode)
 		call Razer#Static(g:razer_modes[a:mode])
 	endif
 endfunction
 
 function! Razer#Setup()
-	autocmd ModeChanged * call Razer#Mode(mode())
+	autocmd ModeChanged * call Razer#Mode('Mode:' . mode())
+	autocmd FocusLost,UILeave,ExitPre,VimSuspend * call Razer#Mode('State:Suspend')
+	autocmd FocusGained,UIEnter,ExitPre,VimResume,VimEnter * call Razer#Mode('State:Resume')
+	autocmd TermEnter * call Razer#Mode('Mode:Term')
 endfunction
 
 if g:razer_enabled && len(readdir(g:razer_device_path)) > 0
