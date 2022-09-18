@@ -53,3 +53,20 @@ let g:razer_modes['Mode:n'] = {'static': 'yellow'}
 " Set insert mode color to white using hex color code
 let g:razer_modes['Mode:n'] = {'static': '#FFFFFF'}
 ```
+
+
+Adding to the project
+=====================
+
+
+Custom Drivers
+--------------
+Unfortunately I only own a `Razer Cynosa V2 (1532:025e)` keyboard so this project is built a lot around that hardware.
+
+If you would like to contibute I would suggest the following:
+
+1. Fork the [repo](https://github.com/hash-bang/vim-open-razer)
+2. Copy the existing base keymap in `./drivers/cynosa-v2.vim` as whatever file the plugin complains about when it tries to load (i.e. the `razer` prefix removed + every non-alpha numeric as '-')
+3. Run `call Razer#WalkKeys()` to walk through all the keys on your keyboard and check the bindings are ok - correcting where necessary
+4. Save your new keymap driver file
+5. Please open an [Pull Request](https://github.com/hash-bang/vim-open-razer/pulls) so others can benefit from your VIM knowledge, you beautiful person you
