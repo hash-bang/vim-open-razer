@@ -19,6 +19,31 @@ if !exists('g:razer_device_max_cols')
 	let g:razer_device_max_cols = 21
 endif
 
+if !exists('g:razer_keymap')
+	let g:razer_keymap = {
+		\ 'esc' : [ 0,  1],
+		\ 'f1'  : [ 0,  3],
+		\ 'f2'  : [ 0,  4],
+		\ 'f3'  : [ 0,  5],
+		\ 'f4'  : [ 0,  6],
+		\ 'f5'  : [ 0,  7],
+		\ 'f6'  : [ 0,  8],
+		\ 'f7'  : [ 0,  9],
+		\ 'f8'  : [ 0, 10],
+		\ 'f9'  : [ 0, 11],
+		\ 'f10' : [ 0, 12],
+		\ 'f11' : [ 0, 13],
+		\ 'f12' : [ 0, 14],
+		\ '`'   : [ 1,  1],
+		\ '1'   : [ 1,  2],
+		\ '2'   : [ 1,  3],
+		\ 'tab' : [ 2,  1],
+		\ 'q'   : [ 2,  2],
+		\ 'w'   : [ 2,  3],
+		\ 'e'   : [ 2,  4],
+		\ 's'   : [ 3,  3],
+	\}
+endif
 
 if !exists('g:razer_colors')
 	let g:razer_colors = {
@@ -81,8 +106,12 @@ endfunction
 
 
 " Set all keys on the keyboard to the same color
+" Functionally this is the same as calling `Razer#Keymap({'other': color})`
+" but more efficient
+"
 " This function differs from Razer#Static() in that it uses the keyboard
 " framebuffer, avoiding the fade effect the hardware forces on a usual color change
+"
 " @param {string} color Any valid color to set all keys to
 function! Razer#Flood(color)
 	let writeColor = Razer#Color2OR(a:color)
@@ -102,6 +131,156 @@ function! Razer#Flood(color)
 	endwhile
 
 	call writefile(['1'], g:razer_device_path . "/matrix_effect_custom")
+endfunction
+
+
+" Set specific key colors, overriding their current state
+" If the "other" key is specified all remaining colors are set to that value
+"
+" @param {dict<string>} keymap A dictionary describing the key colors
+" @param {string} [keymap.other] Default color for any key not specified
+function Razer#Keymap(keymap)
+	" Calculate if we need to set everything or can optimize for just the
+	" delta key color changes
+	let set_all = has_key(a:keymap, 'other')
+
+	" Populate initial row matrix (cols x rows) {{{
+	let rows = []
+	let row = 0
+	while row < g:razer_device_max_rows + 1
+		let row += 1
+		let rows += [{
+			\ 'map': repeat([-1], g:razer_device_max_cols),
+			\ 'start': -1,
+			\ 'end': -1,
+		\}]
+	endwhile
+	" }}}
+
+	" Populate matrix with incoming keymap {{{
+	for key in keys(a:keymap)
+		if key =~ "^\\d\\+,\\d\\+$"
+			let key_color = Razer#Color2OR(a:keymap[key])
+			let key_ref = split(key, ",")
+			let key_y = key_ref[0]
+			let key_x = key_ref[1]
+			echo "FORCE SET KEY " . key_y . "," + key_x " = " . a:keymap[key]
+			let rows[key_y]['map'][key_x] = key_color
+			let set_all = 1
+			let a:keymap['other'] = '#000000'
+		elseif has_key(g:razer_keymap, key)
+			let key_color = Razer#Color2OR(a:keymap[key])
+			let key_y = g:razer_keymap[key][0]
+			let key_x = g:razer_keymap[key][1]
+
+			echo "SET KEY " . key_x . "," . key_y . " = " . string(key_color)
+
+			" Set key color
+			" let rows[g:razer_keymap[key][0]]['map'][key_x] = key_color
+			let rows[key_y]['map'][key_x] = key_color
+
+			" Only adjust start / end params if we know we are not setting all
+			" keys - this is inefficient but hey, why not!
+			if ! set_all
+				" Move start position if its not been set yet OR is lower than current
+				if rows[key_y]['start'] < 0 || key_x < rows[key_y]['start']
+					let rows[key_y]['start'] = key_x
+				endif
+
+				" Move end position if its not been set yet OR is higher than current
+				if rows[key_y]['end'] < 0 || key_x > rows[key_y]['end']
+					let rows[key_y]['end'] = key_x
+				endif
+			endif
+		elseif key == 'other'
+			" Do nothing - handled later
+		else
+			echoerr "Unknown key '" . key . "'"
+		endif
+	endfor
+	" }}}
+
+	" If "other" meta key exists populate all gaps {{{
+	if set_all
+		let otherColor = Razer#Color2OR(a:keymap['other'])
+		let row = 0
+		while row < len(rows)
+			"
+			" Iterate over all keys setting the color if its not already been set above
+			let col = 0
+			while col < len(rows[row]['map'])
+
+				let cell = rows[row]['map'][col]
+				if type(cell) == type(0) && cell < 0
+					let rows[row]['map'][col] = otherColor
+				endif
+
+				let col += 1
+			endwhile
+
+			" Remove offset calc to splat the entire row anyway
+			let rows[row]['start'] = 0
+			let rows[row]['end'] = len(rows[row]['map'])
+
+			let row += 1
+		endwhile
+	endif
+	" }}}
+
+	" Write all rows which have a marked change to the driver {{{
+	let row = 0
+	while row < len(rows)
+		" We have work to do?
+		if rows[row]['start'] >= 0
+			let writeLine = 0z000000
+			let writeLine[0] = row
+			let writeLine[1] = rows[row]['start']
+			let writeLine[2] = rows[row]['end']
+			for cell in rows[row]['map'][ rows[row]['start'] : rows[row]['end'] ]
+				" echo "APPEND FOR " . row . " ~ [" . string(cell) . "]"
+				let writeLine += cell
+			endfor
+			let writeLine += 0z000000
+			echo "RAW WRITE " . row . " " . rows[row]['start'] . ":" . rows[row]['end']  . " = [" . string(writeLine) . "] ~ " . len(writeLine) . " items"
+			call writefile(writeLine, g:razer_device_path . "/matrix_custom_frame")
+		endif
+		let row += 1
+	endwhile
+
+	call writefile(['1'], g:razer_device_path . "/matrix_effect_custom")
+	" }}}
+endfunction
+
+
+" Show each keymap item in sequence prompting the user to move on in each case
+" This function is designed to kep with setting up the keymap
+" @param {number} [prompt=1] Whether to prompt the user or just animate through the keys
+function Razer#WalkKeymap(prompt=1)
+	let key_offset = 0
+	while key_offset < len(g:razer_keymap)
+		let key = keys(g:razer_keymap)[key_offset]
+		let keymap = {'other': 'black'}
+		let keymap[key] = 'white'
+		call Razer#Keymap(keymap)
+
+		if a:prompt == 1
+			let user_response = inputlist([
+				\ 'Currently showing key [' . key . ']',
+				\ '0 / Enter. Next map',
+				\ '1. Previous map',
+			\])
+			if user_response == 0
+				let key_offset += 1
+			elseif user_response == 1
+				let key_offset -= 1
+			elseif key_offset > 1
+				break
+			endif
+		else
+			sleep 1
+			let key_offset += 1
+		endif
+	endwhile
 endfunction
 
 
