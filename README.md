@@ -59,6 +59,13 @@ Adding to the project
 =====================
 
 
+Custom Themes
+-------------
+Some pre-packaged themes are set up in the [themes](./themes) directory. These will only be loaded if `g:razer_modes` isn't already defined however.
+
+If you do come up with something please open a [Pull Request](https://github.com/hash-bang/vim-open-razer/pulls) so others can benefit from your styling abilities
+
+
 Custom Drivers
 --------------
 Unfortunately I only own a `Razer Cynosa V2 (1532:025e)` keyboard so this project is built a lot around that hardware.
@@ -69,4 +76,4 @@ If you would like to contibute I would suggest the following:
 2. Copy the existing base keymap in `./drivers/cynosa-v2.vim` as whatever file the plugin complains about when it tries to load (i.e. the `razer` prefix removed + every non-alpha numeric as '-')
 3. Run `call Razer#WalkKeys()` to walk through all the keys on your keyboard and check the bindings are ok - correcting where necessary
 4. Save your new keymap driver file
-5. Please open an [Pull Request](https://github.com/hash-bang/vim-open-razer/pulls) so others can benefit from your VIM knowledge, you beautiful person you
+5. Please open a [Pull Request](https://github.com/hash-bang/vim-open-razer/pulls) so others can benefit from your VIM knowledge, you beautiful person you
