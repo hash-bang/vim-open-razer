@@ -105,10 +105,12 @@ endfunction
 
 
 " Bootstrap functionality
-if g:razer_enabled && len(readdir(g:razer_device_path)) > 0
-	call Razer#Setup()
-elseif g:razer_silent
-	" Do nothing
-else
-	echoerr "No OpenRazer device found, use `let g:razer_device_path = /sys/bus/hid/drivers/razerkbd/<DEVICE>` to the right device or `let g:razer_silent = 1` to silence"
-endif
+try
+	if g:razer_enabled && len(readfile(g:razer_device_path . '/device_serial')) > 0
+		call Razer#Setup()
+	endif
+catch
+	if g:razer_silent == 0
+		echoerr "No OpenRazer device found, use `let g:razer_device_path = /sys/bus/hid/drivers/razerkbd/<DEVICE>` to the right device or `let g:razer_silent = 1` to silence"
+	endif
+endtry
