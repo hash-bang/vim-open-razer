@@ -28,30 +28,8 @@ if g:razer_debug || !exists('g:razer_device_max_cols')
 	let g:razer_device_max_cols = 21
 endif
 
-if !exists('g:razer_keymap')
-	let g:razer_keymap = {
-		\ 'esc' : [ 0,  1],
-		\ 'f1'  : [ 0,  3],
-		\ 'f2'  : [ 0,  4],
-		\ 'f3'  : [ 0,  5],
-		\ 'f4'  : [ 0,  6],
-		\ 'f5'  : [ 0,  7],
-		\ 'f6'  : [ 0,  8],
-		\ 'f7'  : [ 0,  9],
-		\ 'f8'  : [ 0, 10],
-		\ 'f9'  : [ 0, 11],
-		\ 'f10' : [ 0, 12],
-		\ 'f11' : [ 0, 13],
-		\ 'f12' : [ 0, 14],
-		\ '`'   : [ 1,  1],
-		\ '1'   : [ 1,  2],
-		\ '2'   : [ 1,  3],
-		\ 'tab' : [ 2,  1],
-		\ 'q'   : [ 2,  2],
-		\ 'w'   : [ 2,  3],
-		\ 'e'   : [ 2,  4],
-		\ 's'   : [ 3,  3],
-	\}
+if g:razer_debug || !exists('g:razer_keymap')
+
 endif
 
 if g:razer_debug || !exists('g:razer_colors')
@@ -66,17 +44,53 @@ if g:razer_debug || !exists('g:razer_colors')
 	\}
 endif
 
-if !exists('g:razer_modes')
+if g:razer_debug || !exists('g:razer_modes')
 	let g:razer_modes = {
-		\ 'Mode:n': {'static': 'blue'},
-		\ 'Mode:i': {'static': 'white'},
-		\ 'Mode:v': {'static': 'purple'},
-		\ 'Mode:V': {'static': 'purple'},
+		\ 'Mode:n': {'keymap': {':': 'red', 'caps': 'red', 'other': 'blue'}},
+		\ 'Mode:i': {'keymap': {'esc': 'red', 'other': 'white'}},
+		\ 'Mode:v': {'keymap': {'esc': 'red', 'other': 'purple'}},
+		\ 'Mode:V': {'keymap': {'esc': 'red', 'other': 'purple'}},
 		\ 'Mode:Term': {'static': 'yellow'},
 		\ 'State:Resume': {'static': 'blue'},
 		\ 'State:Suspend': {'static': 'blue'},
 	\}
 endif
+" }}}
+
+" Generic state variables {{{
+" Path to the main root directory of this plugin
+" @type {string}
+let s:razer_path = resolve(expand('<sfile>:h') . '/..')
+" }}}
+
+" Generic utility functions {{{
+
+" Constrain a numeric value between a min / max
+" @param {number} value The value to set
+" @param {number} min The minimum value allowed
+" @param {number} max The maximum value allowed
+" @returns {number} The output number clamped between min + max
+function! s:clamp(value, min, max)
+	if a:value < a:min
+		return a:min
+	elseif a:value > a:max
+		return a:max
+	else
+		return a:value
+	endif
+endfunction
+
+
+function! s:position2map(row, col)
+	for key in keys(g:razer_keymap)
+		if (g:razer_keymap[key][0] == a:row && g:razer_keymap[key][1] == a:col)
+			echo "Match key " . key . " for " . a:row . "," . a:col
+			return key
+		endif
+	endfor
+	echo "No match for " . a:row . "," . a:col
+	return ''
+endfunction
 " }}}
 
 
@@ -173,7 +187,6 @@ function Razer#Keymap(keymap)
 			let key_ref = split(key, ",")
 			let key_y = key_ref[0]
 			let key_x = key_ref[1]
-			echo "FORCE SET KEY " . key_y . "," + key_x " = " . a:keymap[key]
 			let rows[key_y]['map'][key_x] = key_color
 			let set_all = 1
 			let a:keymap['other'] = '#000000'
@@ -181,8 +194,6 @@ function Razer#Keymap(keymap)
 			let key_color = Razer#Color2OR(a:keymap[key])
 			let key_y = g:razer_keymap[key][0]
 			let key_x = g:razer_keymap[key][1]
-
-			echo "SET KEY " . key_x . "," . key_y . " = " . string(key_color)
 
 			" Set key color
 			" let rows[g:razer_keymap[key][0]]['map'][key_x] = key_color
@@ -250,7 +261,7 @@ function Razer#Keymap(keymap)
 				let writeLine += cell
 			endfor
 			let writeLine += 0z000000
-			echo "RAW WRITE " . row . " " . rows[row]['start'] . ":" . rows[row]['end']  . " = [" . string(writeLine) . "] ~ " . len(writeLine) . " items"
+			" echo "RAW WRITE " . row . " " . rows[row]['start'] . ":" . rows[row]['end']  . " = [" . string(writeLine) . "] ~ " . len(writeLine) . " items"
 			call writefile(writeLine, g:razer_device_path . "/matrix_custom_frame")
 		endif
 		let row += 1
@@ -262,33 +273,73 @@ endfunction
 
 
 " Show each keymap item in sequence prompting the user to move on in each case
-" This function is designed to kep with setting up the keymap
+" This function is designed to help with setting up the keymap
 " @param {number} [prompt=1] Whether to prompt the user or just animate through the keys
 function Razer#WalkKeymap(prompt=1)
 	let key_offset = 0
-	while key_offset < len(g:razer_keymap)
-		let key = keys(g:razer_keymap)[key_offset]
+	let keys = sort(keys(g:razer_keymap))
+
+	while key_offset < len(keys)
+		let key = keys[key_offset]
 		let keymap = {'other': 'black'}
 		let keymap[key] = 'white'
 		call Razer#Keymap(keymap)
 
 		if a:prompt == 1
-			let user_response = inputlist([
+			let user_response = confirm(
 				\ 'Currently showing key [' . key . ']',
-				\ '0 / Enter. Next map',
-				\ '1. Previous map',
+				\ "&Next\n&Previous\n&Quit"
 			\])
-			if user_response == 0
-				let key_offset += 1
-			elseif user_response == 1
-				let key_offset -= 1
-			elseif key_offset > 1
-				break
+			if user_response == 0 || user_response == 1
+				let key_offset = s:clamp(key_offset + 1, 0, len(keys))
+			elseif user_response == 2
+				let key_offset = s:clamp(key_offset -1, 0, len(keys))
+			else
+				return
 			endif
 		else
 			sleep 1
 			let key_offset += 1
 		endif
+	endwhile
+endfunction
+
+
+" Show each key position in sequence prompting the user to move on in each case
+" This function is designed to help with setting up the keymap
+" @param {number} [prompt=1] Whether to prompt the user or just animate through the keys
+function Razer#WalkKeys(prompt=1)
+	let row = 0
+	while row < g:razer_device_max_rows
+		let col = 0
+		while col < g:razer_device_max_cols
+			let keymap = {'other': 'black'}
+			let keymap[row . ',' . col] = 'white'
+			call Razer#Keymap(keymap)
+
+			if a:prompt == 1
+				let existing_map = s:position2map(row, col)
+				let user_response = confirm(
+					\ 'Currently showing key position [' . row . ',' . col . ']' . (existing_map != '' ? ' - mapped to "' . existing_map . '"' : ''),
+					\ "&Next\n&Previous\n\&Down\n&Up\n&Quit"
+				\)
+				if user_response == 0 || user_response == 1
+					let col += 1
+				elseif user_response == 2
+					let col = s:clamp(col - 1, 0, g:razer_device_max_cols)
+				elseif user_response == 3
+					let row = s:clamp(row + 1, 0, g:razer_device_max_rows)
+				elseif user_response == 4
+					let row = s:clamp(row - 1, 0, g:razer_device_max_rows)
+				else
+					return
+				endif
+			else
+				sleep 1
+				let col += 1
+			endif
+		endwhile
+		let row += 1
 	endwhile
 endfunction
 
@@ -301,6 +352,8 @@ function! Razer#Action(action)
 		call Razer#Static(a:action['static'])
 	elseif (has_key(a:action, 'flood'))
 		call Razer#Flood(a:action['flood'])
+	elseif (has_key(a:action, 'keymap'))
+		call Razer#Keymap(a:action['keymap'])
 	else
 		throw "Unknown action '" . a:action . "'"
 	endif
@@ -321,21 +374,55 @@ endfunction
 " Set up the main autocmd and other hook functionality to bind to various VIM operations
 " This command will be automatically called if `g:razer_enabled == 1` and a
 " valid `g:razer_device_path` is found
-function! Razer#Setup()
+" @see Razer#Bootstrap()
+function! Razer#Init()
+	" Determine keymap to use {{{
+	let driver_file =
+		\ g:razer_device_keymap == 'auto'
+			\ ? substitute(
+				\ readfile(g:razer_device_path . '/device_type')[0],
+				\ '^.*$',
+				\ "\\L\\0",
+				\ ''
+			\)
+			\ : g:razer_device_keymap
+
+	" Strip redundent "razer " prefix from drivers
+	let driver_file = substitute(driver_file, '^razer ', '', '')
+
+	" Replace non-alpha-numeric with '-', so it will match a file in ./drivers/
+	let driver_file = substitute(driver_file, "\\W\\{1,}", '-', 'g')
+
+	let driver_path = s:razer_path . '/drivers/' . fnameescape(driver_file) . '.vim'
+	try
+		execute('source ' . driver_path)
+	catch
+		echoerr "Error including the device driver '" . driver_file . "' - cant find a corresponding driver at [" . driver_path . "]. See https://github.com/hash-bang/vim-open-razer#custom-drivers for more details"
+	endtry
+	" }}}}
+
+	" Bind to various event listeners {{{
 	autocmd ModeChanged * call Razer#Mode('Mode:' . mode())
 	autocmd FocusLost,UILeave,ExitPre,VimSuspend * call Razer#Mode('State:Suspend')
 	autocmd FocusGained,UIEnter,ExitPre,VimResume,VimEnter * call Razer#Mode('State:Resume')
 	autocmd TermEnter * call Razer#Mode('Mode:Term')
+	" }}}
 endfunction
 
 
 " Bootstrap functionality
-try
-	if g:razer_enabled && len(readfile(g:razer_device_path . '/device_serial')) > 0
-		call Razer#Setup()
-	endif
-catch
-	if g:razer_silent == 0
-		echoerr "No OpenRazer device found, use `let g:razer_device_path = /sys/bus/hid/drivers/razerkbd/<DEVICE>` to the right device or `let g:razer_silent = 1` to silence"
-	endif
-endtry
+" Run automatically on boot
+function! Razer#Bootstrap()
+	try
+		if g:razer_enabled && len(readfile(g:razer_device_path . '/device_serial')) > 0
+			call Razer#Init()
+		endif
+	catch
+		echo "NOPE"
+		if g:razer_silent == 0
+			echoerr "No OpenRazer device found, use `let g:razer_device_path = /sys/bus/hid/drivers/razerkbd/<DEVICE>` to the right device or `let g:razer_silent = 1` to silence"
+		endif
+	endtry
+endfunction
+
+call Razer#Bootstrap()
