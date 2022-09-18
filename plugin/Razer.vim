@@ -1,21 +1,30 @@
 " Options loading {{{
-if !exists('g:razer_enabled')
-	let g:razer_enabled = 1
+" Set this to 1 to override all "if it doesn't already exist set it" options
+" This is useful for rapidly reloading this module (via `source %`) to update
+" bindings and keymaps
+let g:razer_debug = 1
+
+if g:razer_debug || !exists('g:razer_enabled')
+	let g:razer_enabled = 0
 endif
 
-if !exists('g:razer_silent')
+if g:razer_debug || !exists('g:razer_silent')
 	let g:razer_silent = 0
 endif
 
-if !exists('g:razer_device_path')
+if g:razer_debug || !exists('g:razer_device_path')
 	let g:razer_device_path = "/sys/bus/hid/drivers/razerkbd/0003:1532:025E.0003"
 endif
 
-if !exists('g:razer_device_max_rows')
+if g:razer_debug || !exists('g:razer_device_keymap')
+	let g:razer_device_keymap = "auto"
+endif
+
+if g:razer_debug || !exists('g:razer_device_max_rows')
 	let g:razer_device_max_rows = 5
 endif
 
-if !exists('g:razer_device_max_cols')
+if g:razer_debug || !exists('g:razer_device_max_cols')
 	let g:razer_device_max_cols = 21
 endif
 
@@ -45,7 +54,7 @@ if !exists('g:razer_keymap')
 	\}
 endif
 
-if !exists('g:razer_colors')
+if g:razer_debug || !exists('g:razer_colors')
 	let g:razer_colors = {
 		\ 'black': '#000000',
 		\ 'white': '#FFFFFF',
