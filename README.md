@@ -40,11 +40,14 @@ let g:razer_modes = {
 
 Supported actions
 =================
+All actions are mapped against modes. These are typically a VIM `dict` object with a single key.
 
-Static - Single color setter
-----------------------------
+
+Static - Single color setter (fade effect)
+------------------------------------------
 Sets all keys to the same color.
 This key takes a single argument which is any valid color.
+This method sets using a fade effect from the current layout, if you want instant see `Flood`
 
 ```vimscript
 " Set normal mode color to yellow
@@ -53,6 +56,34 @@ let g:razer_modes['Mode:n'] = {'static': 'yellow'}
 " Set insert mode color to white using hex color code
 let g:razer_modes['Mode:n'] = {'static': '#FFFFFF'}
 ```
+
+
+Flood - Single color setter (instant)
+-------------------------------------
+Sets all keys to the same color instantly.
+This key takes a single argument which is any valid color.
+This method sets using a fade effect from the current layout, if you want instant see `Flood`
+
+```vimscript
+" Set normal mode color to yellow
+let g:razer_modes['Mode:n'] = {'flood': 'yellow'}
+
+" Set insert mode color to white using hex color code
+let g:razer_modes['Mode:n'] = {'flood': '#FFFFFF'}
+```
+
+Inherit - Copy an existing mode
+-------------------------------
+Rather than define the same mode in multiple places the `inherit` action allows a pointer to an existing mode.
+
+```vimscript
+" Copy the `Mode:n` method to `State:Resume`
+let g:razer_modes['State:Resume'] = {'inherit': 'Mode:n'}
+
+" Copy the `Mode:n` method to `State:Resume` - alternate syntax
+let g:razer_modes[State:Resume] = '>Mode:n'
+```
+
 
 
 Adding to the project
