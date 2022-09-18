@@ -2,10 +2,10 @@
 " Set this to 1 to override all "if it doesn't already exist set it" options
 " This is useful for rapidly reloading this module (via `source %`) to update
 " bindings and keymaps
-let g:razer_debug = 1
+let g:razer_debug = 0
 
 if g:razer_debug || !exists('g:razer_enabled')
-	let g:razer_enabled = 0
+	let g:razer_enabled = 1
 endif
 
 if g:razer_debug || !exists('g:razer_silent')
