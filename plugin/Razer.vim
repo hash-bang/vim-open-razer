@@ -28,8 +28,8 @@ if g:razer_debug || !exists('g:razer_device_max_cols')
 	let g:razer_device_max_cols = 21
 endif
 
-if g:razer_debug || !exists('g:razer_keymap')
-
+if g:razer_debug || !exists('g:razer_theme')
+	let g:razer_theme = 'default'
 endif
 
 if g:razer_debug || !exists('g:razer_colors')
@@ -44,16 +44,8 @@ if g:razer_debug || !exists('g:razer_colors')
 	\}
 endif
 
-if g:razer_debug || !exists('g:razer_modes')
-	let g:razer_modes = {
-		\ 'Mode:n': {'keymap': {':': 'red', 'caps': 'red', 'other': 'blue'}},
-		\ 'Mode:i': {'keymap': {'esc': 'red', 'other': 'white'}},
-		\ 'Mode:v': {'keymap': {'esc': 'red', 'other': 'purple'}},
-		\ 'Mode:V': {'keymap': {'esc': 'red', 'other': 'purple'}},
-		\ 'Mode:Term': {'static': 'yellow'},
-		\ 'State:Resume': {'static': 'blue'},
-		\ 'State:Suspend': {'static': 'blue'},
-	\}
+if g:razer_debug || !exists('g:razer_theme')
+	let g:razer_theme = "default"
 endif
 " }}}
 
@@ -371,12 +363,35 @@ function! Razer#Mode(mode)
 endfunction
 
 
+" Load a specific theme file
+" @param {string} [theme='default'] The theme file to load, if unspecified defaults to `g:razer_theme`
+" @param {number} [force=0] Only load the theme if no other `g:razer_modes` state exists
+function! Razer#Theme(theme=g:razer_theme, force=0)
+	if ! a:force && exists('g:razer_modes')
+		return
+	endif
+
+	echo "Load theme " . a:theme
+	try
+		let theme_path = s:razer_path . '/themes/' . fnameescape(a:theme) . '.vim'
+		echo "INCLUDE [" . theme_path . "]"
+		execute('source ' . theme_path)
+		if ! exists('g:razer_modes')
+			echoerr "Expeccted `g:razer_modes` to now be defined after including [" . theme_path . "] but its still not - missing or corrupt theme?"
+			let g:razer_modes = {}
+		endif
+	catch
+		echorr "Error loading the vim-open-razor theme '" . a:theme . '" from [' . theme_path . "]'"
+	endtry
+endfunction
+
+
 " Set up the main autocmd and other hook functionality to bind to various VIM operations
 " This command will be automatically called if `g:razer_enabled == 1` and a
 " valid `g:razer_device_path` is found
 " @see Razer#Bootstrap()
 function! Razer#Init()
-	" Determine keymap to use {{{
+	" Determine keymap to use + include it {{{
 	let driver_file =
 		\ g:razer_device_keymap == 'auto'
 			\ ? substitute(
@@ -401,6 +416,10 @@ function! Razer#Init()
 	endtry
 	" }}}}
 
+	" Load theme {{{
+	call Razer#Theme()
+	" }}}
+
 	" Bind to various event listeners {{{
 	autocmd ModeChanged * call Razer#Mode('Mode:' . mode())
 	autocmd FocusLost,UILeave,ExitPre,VimSuspend * call Razer#Mode('State:Suspend')
@@ -418,7 +437,6 @@ function! Razer#Bootstrap()
 			call Razer#Init()
 		endif
 	catch
-		echo "NOPE"
 		if g:razer_silent == 0
 			echoerr "No OpenRazer device found, use `let g:razer_device_path = /sys/bus/hid/drivers/razerkbd/<DEVICE>` to the right device or `let g:razer_silent = 1` to silence"
 		endif
